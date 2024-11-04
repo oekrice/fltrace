@@ -48,7 +48,7 @@ class trace_fieldlines():
         self.max_line_length = 10000
         self.ds = 0.1 #Tracing 'timestep' as a proportion of the grid size
         self.weakness_limit = 1e-3   #Minimum field strength to stop plotting
-        self.line_plot_length = 500  #To save time while plotting, reduce the length of the plotted lines
+        self.line_plot_length = 50  #To save time while plotting, reduce the length of the plotted lines
 
         #Folder admin
         if not os.path.exists('./fl_data/'):
@@ -81,11 +81,12 @@ class trace_fieldlines():
             line_length = len(line[line[:,2]<1e6])
             #Thin out the lines (if required)
             if line_length > 0:
-                thin_fact = 1#max(int(line_length/self.line_plot_length), 1)
+                thin_fact = max(int(line_length/self.line_plot_length), 1)
                 thinned_line = line[:line_length:thin_fact].copy()
                 thinned_line[-1] = line[line_length-1].copy()
             else:
                 continue
+
             line = np.array(thinned_line).tolist()
             doplot = True
             if line_length == 0:
