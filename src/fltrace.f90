@@ -15,7 +15,7 @@ PROGRAM fltrace
 
     !##########################################
     !DATA ROOT HERE
-    data_root = './Data/'
+    data_root = '../Data_150/'
 
     ! Put some of the major variables in here - things that can be changed occasionally but not in a series of runs
 
@@ -162,7 +162,11 @@ PROGRAM fltrace
     pt = start; null_point = 0
     do while (.true.)
         if ((pt(0) < x0) .or. (pt(0) > x1) .or. (pt(1) < y0) .or. (pt(1) > x1) .or. &
-        (pt(2) < z0) .or. (pt(2) > z1) .or. (lcount > max_line_length-1) .or. (null_point > 0.5_num)) then
+        (pt(2) < z0) .or. (pt(2) > z1) .or. (lcount > max_line_length-1)) then
+            exit
+        end if
+        if (null_point > 0.5_num) then
+            line(1:max_line_length-1,0:2) = 1e6
             exit
         end if
         line(lcount,0:2) = pt

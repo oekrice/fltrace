@@ -40,7 +40,7 @@ MODULE grid
 
         call try(nf90_close(ncid))
 
-        call check_divergence
+        !call check_divergence
 
         if (print_flag > 0.5) print*, 'Grid established and magnetic field read-in'
 
