@@ -25,7 +25,7 @@ class trace_fieldlines():
     def __init__(self):
         #Establish grid parameters (can be read in from elsewhere of course)
         self.run = 0
-        self.snap = 300
+        self.snap = 0
         self.print_flag = 1
         self.save_number = self.snap
         self.data_root = './Data/'
