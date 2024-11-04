@@ -41,8 +41,6 @@ TARGET = fltrace
 
 SRCFILES = shared_data.f90 grid.f90 fltrace.f90
 
-$(info archie_flag $(archie_flag))
-
 ifeq ($(archie_flag),true)
 $(info Compiling on Archie-West)
 
