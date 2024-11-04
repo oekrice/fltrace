@@ -2,6 +2,8 @@
 
 $(info Machine name: $(shell hostname))
 
+$(info Machine name: $(shell hostname))
+
 ifeq ($(shell hostname),brilluoin.dur.ac.uk)
 MPIF90 ?= /usr/lib64/openmpi/bin/mpif90
 FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
@@ -9,8 +11,13 @@ NETCDF = -I /usr/lib64/gfortran/modules
 NETCDFLIB = -L/usr/lib64/libnetcdff.so.7 -lnetcdff
 else ifeq ($(shell hostname),login1.ham8.dur.ac.uk)
 MPIF90 ?= mpif90
-FFLAGS = -O3 -fcheck=all -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
-NETCDF = -I/apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/include
+FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
+NETCDF = -I /apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/include
+NETCDFLIB = -L/apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/lib  -lnetcdff
+else ifeq ($(shell hostname),login2.ham8.dur.ac.uk)
+MPIF90 ?= mpif90
+FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
+NETCDF = -I /apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/include
 NETCDFLIB = -L/apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/lib  -lnetcdff
 else
 MPIF90 ?= /usr/lib64/openmpi/bin/mpif90
@@ -18,8 +25,6 @@ FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-
 NETCDF = -I /usr/lib64/gfortran/modules
 NETCDFLIB = -L/usr/lib64/libnetcdff.so.7 -lnetcdff
 endif
-
-
 
 MODULEFLAG = -module $(OBJDIR)
 TARGET = fltrace
