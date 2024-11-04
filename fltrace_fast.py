@@ -160,6 +160,7 @@ class trace_fieldlines():
         elif os.uname()[1] == 'login1.ham8.dur.ac.uk':
             os.system('mpiexec -np 1 ./bin/fltrace')
         else:
+            os.system('mpiexec -np 1 ./bin/fltrace')
 
         try:
             data = netcdf_file('./fl_data/flines.nc', 'r', mmap=False)
