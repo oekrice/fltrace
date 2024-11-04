@@ -155,8 +155,11 @@ class trace_fieldlines():
 
     def trace_lines_fortran(self):
         os.system('make')
-        os.system('/usr/lib64/openmpi/bin/mpiexec -np 1 ./bin/fltrace')
-        data = netcdf_file('./fl_data/flines.nc', 'r', mmap=False)
+        if os.uname()[1] == 'brillouin.dur.ac.uk':
+            os.system('/usr/lib64/openmpi/bin/mpiexec -np 1 ./bin/fltrace')
+        elif os.uname()[1] == 'login1.ham8.dur.ac.uk':
+            os.system('mpiexec -np 1 ./bin/fltrace')
+        else:
 
         try:
             data = netcdf_file('./fl_data/flines.nc', 'r', mmap=False)
