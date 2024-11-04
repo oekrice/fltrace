@@ -15,15 +15,15 @@ MODULE grid
         !Also read in the magnetic field here because may as well
         IMPLICIT NONE
         INTEGER:: ncid, vid
-        character(len=4) :: run_id
+        character(len=4) :: snap_id
         call get_coordinates
 
         allocate(bx(0:nx,-1:ny+1,-1:nz+1))
         allocate(by(-1:nx+1,0:ny,-1:nz+1))
         allocate(bz(-1:nx+1,-1:ny+1,0:nz))
 
-        write (run_id,'(I4.4)') run
-        bfield_filename = trim(trim(data_root)//trim(run_id)//'.nc')
+        write (snap_id,'(I4.4)') snap
+        bfield_filename = trim(trim(data_root)//trim(snap_id)//'.nc')
 
         if (print_flag > 0.5) print*, 'Using magnetic field from file', bfield_filename
 

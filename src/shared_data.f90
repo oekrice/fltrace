@@ -21,8 +21,8 @@ MODULE shared_data
     !Parameters
     real(num), dimension(:):: flparameters(0:19)
     integer:: run, snap, print_flag
-    CHARACTER(LEN =64):: data_root
-    CHARACTER(LEN =64):: bfield_filename
+    CHARACTER(LEN =128):: data_root
+    CHARACTER(LEN =128):: bfield_filename
 
     !Grid
     integer:: nx, ny, nz

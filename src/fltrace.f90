@@ -15,7 +15,7 @@ PROGRAM fltrace
 
     !##########################################
     !DATA ROOT HERE
-    data_root = './Data/'
+    data_root = '../Data_150/'
 
     ! Put some of the major variables in here - things that can be changed occasionally but not in a series of runs
 

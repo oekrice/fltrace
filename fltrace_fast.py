@@ -25,10 +25,10 @@ class trace_fieldlines():
     def __init__(self):
         #Establish grid parameters (can be read in from elsewhere of course)
         self.run = 0
-        self.snap = 0
+        self.snap = 300
         self.print_flag = 1
         self.save_number = self.snap
-        self.data_root = './Data/'
+        self.data_root = '../Data_150/'
 
         self.bz = np.swapaxes(netcdf_file('%s%04d.nc' % (self.data_root, self.snap), 'r', mmap=False).variables['bz'][:],0,2)
         #Import bz as a test of the resolutions (and for the pyvista plot)
@@ -143,7 +143,7 @@ class trace_fieldlines():
         variables[7] = self.y1
         variables[8] = self.z0
         variables[9] = self.z1
-        variables[10] = self.save_number
+        variables[10] = self.snap
         variables[11] = self.nstarts
         variables[12] = self.print_flag
         variables[13] = self.max_line_length
