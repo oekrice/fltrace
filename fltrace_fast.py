@@ -48,6 +48,7 @@ class trace_fieldlines():
         self.max_line_length = 10000
         self.ds = 0.1 #Tracing 'timestep' as a proportion of the grid size
         self.weakness_limit = 1e-3   #Minimum field strength to stop plotting
+        self.line_plot_length = 500  #To save time while plotting, reduce the length of the plotted lines
 
         #Folder admin
         if not os.path.exists('./fl_data/'):
@@ -74,13 +75,18 @@ class trace_fieldlines():
         p.background_color = "black"
         p.add_mesh(surface, scalars= self.bz[:,:,0], show_edges=True,cmap = 'plasma')
 
-        for li, line in enumerate(self.lines):
 
+        for li, line in enumerate(self.lines):
             line = np.array(line)
             line_length = len(line[line[:,2]<1e6])
-
-            line = np.array(line[:line_length]).tolist()
-
+            #Thin out the lines (if required)
+            if line_length > 0:
+                thin_fact = 1#max(int(line_length/self.line_plot_length), 1)
+                thinned_line = line[:line_length:thin_fact].copy()
+                thinned_line[-1] = line[line_length-1].copy()
+            else:
+                continue
+            line = np.array(thinned_line).tolist()
             doplot = True
             if line_length == 0:
                 doplot = False
@@ -107,7 +113,7 @@ class trace_fieldlines():
             for j in range(nthetas):
                 self.starts.append([ris[i]*np.cos(tjs[j]),ris[i]*np.sin(tjs[j]),self.z1-1e-6])
         #And from the bottom (for the interior ones only)
-        nrs = 20; nthetas = 2
+        nrs = 20; nthetas = 10
         ris = np.linspace(0.5*self.x0/nrs,self.x0-0.5*self.x0/nrs,nrs)
         tjs = np.linspace(0+1e-6,2*np.pi*(1-1/nthetas),nthetas)
         for i in range(nrs):

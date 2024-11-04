@@ -28,7 +28,7 @@ PREPROFLAGS = $(DEFINES) $(D)_COMMIT='"$(COMMIT)"' $(D)_DATE=$(DATE) \
 
 
 
-SRCFILES = shared_data.o grid.o import_export.o fltrace.o
+SRCFILES = shared_data.o grid.o fltrace.o
 
 OBJFILES := $(SRCFILES:.f90=.o)
 OBJFILES := $(OBJFILES:.F90=.o)
@@ -77,7 +77,6 @@ FORCE:
 
 shared_data.o: shared_data.f90
 grid.o: grid.f90 shared_data.o
-import_export.o: import_export.f90 shared_data.o
-fltrace.o: fltrace.f90 shared_data.o grid.o import_export.o
+fltrace.o: fltrace.f90 shared_data.o grid.o
 
 
