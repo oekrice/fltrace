@@ -28,7 +28,7 @@ class trace_fieldlines():
         self.snap = 300
         self.print_flag = 1
         self.save_number = self.snap
-        self.data_root = '../Data_150/'
+        self.data_root = './Data/'
 
         self.bz = np.swapaxes(netcdf_file('%s%04d.nc' % (self.data_root, self.snap), 'r', mmap=False).variables['bz'][:],0,2)
         #Import bz as a test of the resolutions (and for the pyvista plot)
