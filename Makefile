@@ -29,73 +29,106 @@ MPIF90 ?= mpiifort
 FFLAGS = -O2
 NETCDF = -I /opt/software/netcdf/intel-2020.4/fortran-4.5.4/include
 NETCDFLIB = -L/opt/software/netcdf/intel-2020.4/fortran-4.5.4/lib  -lnetcdff 
-MODULEFLAG = -module
+MODULEFLAG = -I/usr/include -I $(OBJDIR)
 endif
 
 TARGET = fltrace
+
 
 # --------------------------------------------------
 # Shouldn't need to touch below here
 # --------------------------------------------------
 
-SRCFILES = shared_data.o grid.o fltrace.o
-archie_flag = true
+SRCFILES = shared_data.f90 grid.f90 fltrace.f90
+archie_flag = false
 
 $(info archie_flag $(archie_flag))
 
 ifeq ($(archie_flag),true)
 $(info Compiling on Archie-West)
 
+FFLAGS += $(MODULEFLAG)
+LDFLAGS = $(FFLAGS)
+
+
+# Set pre-processor defines
+DEFINES := $(DEFINE)
+
+# --------------------------------------------------
+# Shouldn't need to touch below here
+# --------------------------------------------------
+
+all: main
+
 SRCDIR = src
 OBJDIR = obj
 BINDIR = bin
-MODULEFLAG = -module
-MACHINEFLAGS = $(COPSON) $(MHDCLUSTER)
-OPFLAGS = $(QMONO)
-FC= mpiifort $(OPFLAGS)
-PREPROFLAGS = $(NONMPIIO)
+FC = $(MPIF90)
+DATE := $(shell date +%s)
+MACHINE := $(shell uname -n)
+PREPROFLAGS = $(DEFINES) $(D)_COMMIT='"$(COMMIT)"' $(D)_DATE=$(DATE) \
+  $(D)_MACHINE='"$(MACHINE)"'
+
 
 OBJFILES := $(SRCFILES:.f90=.o)
 OBJFILES := $(OBJFILES:.F90=.o)
 
-VPATH = $(SRCDIR):$(OBJDIR)
+FULLTARGET = $(BINDIR)/$(TARGET)
+
+VPATH = $(SRCDIR):$(SRCDIR)/core:$(SDF)/src:$(OBJDIR)
+
+-include $(SRCDIR)/COMMIT
+
+ifeq ($(DONE_COMMIT),)
+main: commit
+else
+main: $(FULLTARGET)
+endif
 
 # Rule to build the fortran files
 
 %.o: %.f90
-	@mkdir -p $(BINDIR) $(OBJDIR)
-	$(FC) -c $(FFLAGS)  $(NETCDF) $(MODULEFLAG) $(OBJDIR) -o $(OBJDIR)/$@ $<
+	$(FC) -c $(FFLAGS) $(NETCDF) -module $(OBJDIR) -o $(OBJDIR)/$@ $<
 
 %.o: %.F90
-	@mkdir -p $(BINDIR) $(OBJDIR) 
-	$(FC) -c $(FFLAGS)  $(NETCDF) $(MODULEFLAG) $(OBJDIR) -o $(OBJDIR)/$@ $(PREPROFLAGS) $<
+	$(FC) -c $(FFLAGS) $(NETCDF) -module $(OBJDIR) -o $(OBJDIR)/$@ $(PREPROFLAGS) $<
 
 $(FULLTARGET): $(OBJFILES)
-	$(FC) $(FFLAGS) $(MODULEFLAG) $(OBJDIR) -o $@ $(addprefix $(OBJDIR)/,$(OBJFILES)) $(NETCDFLIB)
+	@mkdir -p $(BINDIR)
+	$(FC) -o $@ $(addprefix $(OBJDIR)/,$(OBJFILES)) $(LDFLAGS) $(NETCDFLIB)
 
-.PHONEY: clean
 clean:
-	@rm -rf *~ $(BINDIR) $(OBJDIR) *.pbs.* *.sh.* $(SRCDIR)/*~ *.log
+	@rm -rf $(BINDIR) $(OBJDIR)
 
-.PHONEY: tidy
+cleanall: tidy
+
 tidy:
-	@rm -rf $(OBJDIR) *.pbs.* *.sh.* $(SRCDIR)/*~ *.log
+	@rm -rf $(OBJDIR) *~ *.pbs.* *.sh.* $(SRCDIR)/*~ *.log
+	$(MAKE) -C $(SDF) cleanall
 
-.PHONEY: datatidy
 datatidy:
 	@rm -rf Data/*
 
-.PHONEY: visit
-visit:
-	@cd VisIT;xml2makefile -clobber l3dv2.xml;make
+tarball:
+	@sh $(SRCDIR)/make_tarball.sh
 
-.PHONEY: visitclean
-visitclean:
-	@cd VisIT;make clean;rm -f .depend
+
+$(OBJFILES): | $(OBJDIR)
+
+$(OBJDIR):
+	@mkdir -p $(OBJDIR)
+
+commit: FORCE
+	@sh $(SRCDIR)/gen_commit_string.sh && $(MAKE) $(MAKECMDGOALS) DONE_COMMIT=1
+
+FORCE:
+
+.PHONY: commit clean cleanall tidy datatidy visit visitclean main FORCE
 
 else
 
 $(info Compiling locally or on Hamilton)
+
 
 all: main
 
