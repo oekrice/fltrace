@@ -1,12 +1,14 @@
 # Set compiler, flags and netcdf library according to machine we are using:
-$(info Machine name: $(shell hostname))
+
+machine = $(shell hostname)
+$(info Machine name: ${machine:3})
 
 ifeq ($(shell hostname),brilluoin.dur.ac.uk)
 MPIF90 ?= /usr/lib64/openmpi/bin/mpif90
 FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
 NETCDF = -I /usr/lib64/gfortran/modules
 NETCDFLIB = -L/usr/lib64/libnetcdff.so.7 -lnetcdff
-else ifeq ($(shell hostname),login.strath.ac.uk)
+else ifeq ($(shell hostname),login1.strath.ac.uk)
 MPIF90 ?= /usr/lib64/openmpi/bin/mpif90
 FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
 NETCDF = -I /usr/lib64/gfortran/modules

@@ -4,7 +4,6 @@ PROGRAM fltrace
 ! Main fortran file. Use this to initialise parameters, grid, produce/read in initial conditions and then run the code.
 !*******************************************************************************
     USE grid
-    USE import_export
     USE shared_data
 
     IMPLICIT NONE
