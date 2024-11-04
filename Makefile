@@ -40,7 +40,6 @@ TARGET = fltrace
 # --------------------------------------------------
 
 SRCFILES = shared_data.f90 grid.f90 fltrace.f90
-archie_flag = false
 
 $(info archie_flag $(archie_flag))
 
@@ -142,8 +141,6 @@ DATE := $(shell date +%s)
 MACHINE := $(shell uname -n)
 PREPROFLAGS = $(DEFINES) $(D)_COMMIT='"$(COMMIT)"' $(D)_DATE=$(DATE) \
   $(D)_MACHINE='"$(MACHINE)"'
-
-
 
 OBJFILES := $(SRCFILES:.f90=.o)
 OBJFILES := $(OBJFILES:.F90=.o)
