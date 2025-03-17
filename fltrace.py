@@ -39,13 +39,12 @@ Will save plots to ./plots/ folder as pngs.
 '''
 
 #Define parameters for plotting:
-input_fname = 'Bout__2021.0621.060000.nc'    #File name within the directory ./input/'
-input_fname = 'Bout__2021.0621.061200.nc'    #File name within the directory ./input/'
-nlines = 1000000                             #Approx number of field lines to trace
+input_fname = 'fname.nc'    #File name within the directory ./input/'
+nlines = 10000                            #Approx number of field lines to trace
 show = True                                 #Plots various things, including the imported magnetic field on the lower boundary
 id = 0                                      #Identifier for this run, so several can be done concurrently or in sequence
 justplot = False                            #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
-closed_boundaries = False                  #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
+closed_boundaries = True               #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
 remove_emission_files = False               #Removes the emission files after plotting
 swapaxes = True                             #Swaps x and z axes of the imported file
 
