@@ -44,18 +44,19 @@ def interpolate_to_staggered_grid(bx_in, by_in, bz_in, swapaxes = False):
 def check_staggered_grid(bx_in, by_in, bz_in):
     #One dimension in each of the coordinates should be one cell longer than the others.
     #OR theoretically could be one shorter.
-    if bx_in.shape[0] == bx_in.shape[1]:
-        xcoord = 2
-    elif bx_in.shape[1] == bx_in.shape[2]:
+    #THIS MAKES NO SENSE
+    if bx_in.shape[0] != by_in.shape[0] and by_in.shape[0] == bz_in.shape[0]:
         xcoord = 0
-    else:
+    elif bx_in.shape[0] != by_in.shape[0] and bx_in.shape[0] == bz_in.shape[0]:
         xcoord = 1
-    if by_in.shape[0] == by_in.shape[1]:
-        ycoord = 2
-    elif by_in.shape[1] == by_in.shape[2]:
-        ycoord = 0
     else:
+        xcoord = 2
+    if bx_in.shape[1] != by_in.shape[1] and by_in.shape[1] == bz_in.shape[1]:
+        ycoord = 0
+    elif bx_in.shape[1] != by_in.shape[1] and bx_in.shape[1] == bz_in.shape[1]:
         ycoord = 1
+    else:
+        ycoord = 2
     #Determine if axes need rearranging -- hopefully just a straight swap...
     if xcoord == 0 and ycoord == 1:
         pass
