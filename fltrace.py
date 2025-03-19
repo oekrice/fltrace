@@ -37,13 +37,18 @@ Reads back into python and plots in 'plot_emissions'
 IMPORTANT -- WILL NEED TO CHANGE THE STUFF AT THE TOP OF THE MAKEFILE DEPENDING ON THE MACHINE
 Will save plots to ./plots/ folder as pngs.
 '''
+id = 4        #Identifier for this run, so several can be done concurrently or in sequence
+
+#Copy files to plot into input folder:
+os.system('scp -r /extra/tmp/trcn27/mf3d/%03d/1000.nc ./input/1000.nc' % id)
 
 #Define parameters for plotting:
-input_fname = 'fname.nc'    #File name within the directory ./input/'
-nlines = 10000                            #Approx number of field lines to trace
-show = True                                 #Plots various things, including the imported magnetic field on the lower boundary
-id = 0                                      #Identifier for this run, so several can be done concurrently or in sequence
-justplot = False                            #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
+#input_fname = 'Bout__2021.0621.061200.nc'    #File name within the directory ./input/'
+input_fname = '1000.nc'    #File name within the directory ./input/'
+
+nlines = 1000000                            #Approx number of field lines to trace
+show = True                                #Plots various things, including the imported magnetic field on the lower boundary
+justplot = False                          #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
 closed_boundaries = True               #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
 remove_emission_files = False               #Removes the emission files after plotting
 swapaxes = True                             #Swaps x and z axes of the imported file
@@ -67,7 +72,6 @@ class Fltrace():
         self.twist_density = None
 
         #Machine-pecific things for saving out etc.
-
         data_directory = ('./input/')
 
         #Create some folders if necessary

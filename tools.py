@@ -162,7 +162,7 @@ def calculate_current(Grid):
 
 def save_for_fortran(Grid):
     #Save out to temporary file so Fortran can read it after it has been bodged
-    fid = netcdf_file('./tmp/%05d.nc' % (Grid.id), 'a')
+    fid = netcdf_file('./tmp/%05d.nc' % (Grid.id), 'w')
     fid.createDimension('xs', Grid.nx+1)
     fid.createDimension('ys', Grid.ny+1)
     fid.createDimension('zs', Grid.nz+1)
@@ -209,8 +209,9 @@ def save_for_fortran(Grid):
     if Grid.twist_density is not None:
         vid = fid.createVariable('twist_density', 'd', ('zc','yc','xc'))
         vid[:] = np.swapaxes(Grid.twist_density, 0, 2)
-
     fid.close()
+
+    data = netcdf_file('./tmp/%05d.nc' % (Grid.id), 'r', mmap=False)
 
     return
 

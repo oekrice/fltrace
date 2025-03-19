@@ -42,7 +42,7 @@ MODULE grid
         write (snap_id,'(I5.5)') snap
         bfield_filename = trim(trim(data_root)//trim(snap_id)//'.nc')
 
-        if (print_flag > 0.5) print*, 'Importing magnetic field to Fortran...'
+        if (print_flag > 0.5) print*, 'Importing magnetic field to Fortran, tmp fname: ', bfield_filename
 
         call try(nf90_open(trim(bfield_filename), nf90_nowrite, ncid))
 
@@ -54,6 +54,7 @@ MODULE grid
 
         call try(nf90_inq_varid(ncid, 'bz', vid))
         call try(nf90_get_var(ncid, vid, bz(1:nx,1:ny,0:nz)))
+
 
         call try(nf90_inq_varid(ncid, 'jx', vid))
         call try(nf90_get_var(ncid, vid, jx(1:nx,0:ny,0:nz)))
