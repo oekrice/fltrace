@@ -191,9 +191,10 @@ for id in range(0, 1):   #Loop for multiple runs
             self.trace_lines_fortran()
 
             #Remove temporary files
-            os.system('rm ./fl_data/flparameters%05d.txt' % self.id)
-            os.system('rm ./fl_data/starts%05d.txt' % self.id)
-            os.system('rm ./tmp/%05d.nc' % (self.id))
+            if False:
+                os.system('rm ./fl_data/flparameters%05d.txt' % self.id)
+                os.system('rm ./fl_data/starts%05d.txt' % self.id)
+                os.system('rm ./tmp/%05d.nc' % (self.id))
 
 
 
@@ -278,12 +279,17 @@ for id in range(0, 1):   #Loop for multiple runs
 
         def trace_lines_fortran(self):
             os.system('make')
-            if os.uname()[1] == 'brillouin.dur.ac.uk' or os.uname()[1] == 'modigliani.dur.ac.uk':
+            os.system('./bin/fltrace %d' % self.id)
+
+            '''
+            if os.uname()[1] == 'brillouin.dur.ac.uk' or os.uname()[1] == 'modigliani.dur.ac.uk' or os.uname()[1] == 'coriolis.dur.ac.uk':
+
                 os.system('/usr/lib64/openmpi/bin/mpiexec -np 1 ./bin/fltrace %d' % self.id)
             elif os.uname()[1] == 'login1.ham8.dur.ac.uk' or os.uname()[1] == 'login2.ham8.dur.ac.uk':
                 os.system('mpiexec -np 1 ./bin/fltrace %d' % self.id)
             else:
                 os.system('mpirun -np 1 ./bin/fltrace %d' % self.id)
+            '''
 
         def plot_emissions(self, allscales = [], remove_files = True):
 
