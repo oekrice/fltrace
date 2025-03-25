@@ -31,12 +31,12 @@ NETCDF = -I /apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/inc
 NETCDFLIB = -L/apps/developers/libraries/netcdf/4.8.1/1/gcc-11.2-openmpi-4.1.1/lib  -lnetcdff
 MODULEFLAG = -module $(OBJDIR)
 else
-archie_flag = true
-MPIF90 ?= mpiifort
-FFLAGS = -O2
-NETCDF = -I /opt/software/netcdf/intel-2020.4/fortran-4.5.4/include
-NETCDFLIB = -L/opt/software/netcdf/intel-2020.4/fortran-4.5.4/lib  -lnetcdff 
-MODULEFLAG = -I/usr/include -I $(OBJDIR)
+archie_flag = false
+MPIF90 ?= /usr/lib64/openmpi/bin/mpif90
+FFLAGS = -O3 -Wuninitialized -march=native -fimplicit-none -Wall -Wextra -ffast-math -funroll-loops --param max-unroll-times=5
+NETCDF = -I /usr/lib64/gfortran/modules
+NETCDFLIB = -L/usr/lib64/libnetcdff.so.7 -lnetcdff
+MODULEFLAG = -module $(OBJDIR)
 endif
 
 TARGET = fltrace
