@@ -38,20 +38,20 @@ IMPORTANT -- WILL NEED TO CHANGE THE STUFF AT THE TOP OF THE MAKEFILE DEPENDING 
 Will save plots to ./plots/ folder as pngs.
 '''
 
-for id in range(0, 1):   #Loop for multiple runs
+for id in range(33,34):   #Loop for multiple runs
 
-    snap = 1000
+    snap = 660
 
     #Copy files to plot into input folder:
-    #os.system('scp -r /extra/tmp/trcn27/mf3d/050/%04d.nc ./input/%04d.nc' % (snap, snap))
+    os.system('scp -r /extra/tmp/trcn27/mf3d/%03d/%04d.nc ./input/%04d.nc' % (id, snap, id))
 
     #Define parameters for plotting:
     #input_fname = 'Bout__2021.0621.061200.nc'    #File name within the directory ./input/'
 
-    input_fname = '%04d.nc' % snap   #File name within the directory ./input/'
+    input_fname = '%04d.nc' % id   #File name within the directory ./input/'
 
-    nlines = 10000                            #Approx number of field lines to trace
-    show = True                             #Plots various things, including the imported magnetic field on the lower boundary
+    nlines = 1000000                            #Approx number of field lines to trace
+    show = False                            #Plots various things, including the imported magnetic field on the lower boundary
     justplot = False                          #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
     closed_boundaries = True               #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
     remove_emission_files = False               #Removes the emission files after plotting
