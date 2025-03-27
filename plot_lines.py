@@ -22,9 +22,10 @@ import pyvista as pv
 import matplotlib.gridspec as gridspec
 from scipy.ndimage import gaussian_filter
 from tools import interpolate_to_staggered_grid, check_staggered_grid, make_coordinate_arrays, calculate_current, save_for_fortran
+from get_flh import FLH
+import pyvista as pv
 from scipy.interpolate import RegularGridInterpolator
 
-from get_flh import FLH
 import matplotlib
 matplotlib.rcParams['text.usetex'] = True
 
@@ -38,6 +39,8 @@ Does field line tracing in fortran, which calculated the quantities integrated a
 Reads back into python and plots in 'plot_emissions'
 IMPORTANT -- WILL NEED TO CHANGE THE STUFF AT THE TOP OF THE MAKEFILE DEPENDING ON THE MACHINE
 Will save plots to ./plots/ folder as pngs.
+
+This one is for using existing emissions to decide which field lines to plot, then output as a 3D plot
 '''
 
 for id in range(0,1):   #Loop for multiple runs
@@ -52,9 +55,9 @@ for id in range(0,1):   #Loop for multiple runs
     input_fname = 'Bout__2021.0621.061200.nc'
     #input_fname = '%04d.nc' % id   #File name within the directory ./input/'
 
-    nlines = 1000000                            #Approx number of field lines to trace
+    nlines = 1000                            #Approx number of field lines to trace
     show = True                            #Plots various things, including the imported magnetic field on the lower boundary
-    justplot = True                          #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
+    justplot = False                        #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
     closed_boundaries = True              #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
     remove_emission_files = False               #Removes the emission files after plotting
     swapaxes = True                             #Swaps x and z axes of the imported file
@@ -63,7 +66,7 @@ for id in range(0,1):   #Loop for multiple runs
         def __init__(self, input_fname, id = 0, nlines = 10000, show = True, do_flh = False, closed_boundaries = False, swapaxes = False, remove_files = False):
 
             #Some parameters
-            self.max_line_length = 100000
+            self.max_line_length = 10000
             self.ds = 0.05 #Tracing 'timestep' as a proportion of the self size
             self.weakness_limit = 1e-5  #Minimum field strength to stop plotting
             self.line_plot_length = 100  #To save time while plotting, reduce the length of the plotted lines
@@ -143,7 +146,7 @@ for id in range(0,1):   #Loop for multiple runs
 
             make_coordinate_arrays(self)
 
-            if self.show: #Plot slice of each coordinate to check this looks right. If it doesn't, try swapping the import axes?
+            if False: #Plot slice of each coordinate to check this looks right. If it doesn't, try swapping the import axes?
                 slice_number = 0
                 fig, axs = plt.subplots(1,3)
                 ax = axs[0]
@@ -198,53 +201,111 @@ for id in range(0,1):   #Loop for multiple runs
                 os.system('rm ./fl_data/starts%05d.txt' % self.id)
                 os.system('rm ./tmp/%05d.nc' % (self.id))
 
+        def interpolate_surface_array(self, array_in):
+            #For when the surface you want is not the correct resolution. Does 2dinterp or something.
+            #Target resolution self.nx, self.ny
+
+            xs_import = np.linspace(0, 1, array_in.shape[0])
+            ys_import = np.linspace(0, 1, array_in.shape[1])
+
+            xs_out = np.linspace(0,1,self.nx)
+            ys_out = np.linspace(0,1,self.ny)
+
+            X, Y = np.meshgrid(xs_out, ys_out, indexing = 'ij')
+            fn = RegularGridInterpolator((xs_import, ys_import), array_in, bounds_error = False, method = 'linear', fill_value = 0.0)
+            array_out = fn((X,Y))   #Difference now interpolated to the new grid
+
+            return array_out
+
 
 
         def set_starts(self):
             #Set the start positions for the lines to be traced. Will by default try to trace in both directions from this position.
 
-            #Plot up from the surface, based on some threshold of how strong the magnetic field is...
-            nlines = self.nlines
+            data = netcdf_file('./fl_data/emiss%05d.nc' % self.id, 'r', mmap=False)
 
+            self.flh_array = data.variables['flh_array'][:]
+            self.winding_array = data.variables['winding_array'][:]
+            self.twist_array = data.variables['twist_array'][:]
+            self.mag_array = data.variables['surface_array'][:]
+            self.current_array = data.variables['current_array'][:]
+
+            data.close()
+
+            nlines = 500000   #Number from the original integration, not this one
             nx_lines = int(np.sqrt(nlines)*(self.x1-self.x0)/(self.y1 - self.y0))
             ny_lines = int(nlines/nx_lines)
 
+            flh_mesh = np.zeros((nx_lines, ny_lines))
+            winding_mesh = np.zeros((nx_lines, ny_lines))
+            twist_mesh = np.zeros((nx_lines, ny_lines))
+            mag_mesh = np.zeros((nx_lines, ny_lines))
+            current_mesh = np.zeros((nx_lines, ny_lines))
+
+            count = 0
+            for i in range(nx_lines):
+                for j in range(ny_lines):
+                    flh_mesh[i,j] = self.flh_array[count]
+                    winding_mesh[i,j] = self.winding_array[count]
+                    twist_mesh[i,j] = self.twist_array[count]
+                    mag_mesh[i,j] = self.mag_array[count]
+                    current_mesh[i,j] = self.current_array[count]
+                    count += 1
+
+            #_______________________________________________________________________________________________________________
+            reference_array = winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
+            reference_array = mag_mesh*winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
+            reference_array = flh_mesh
+            #reference_array = np.ones(winding_mesh.shape)
+
+
+
+            self.surface_array = self.interpolate_surface_array(reference_array)   #Distribution of surface somethingorother
+            #Want to plot the lines based on where the flh differences are highest
+
+            max_surface = np.max(np.abs(self.surface_array + 1)) + 1e-6
+
+            nlines = self.nlines
+
             alpha = 2.0
+            alphasum = np.sum(np.abs(self.surface_array + 1)**alpha)
+            pb = max_surface**alpha*nlines/alphasum
 
             self.starts = []
 
-            boundary_nolines = 0.9  #Fraction of the domain to actually bother plotting from
-            dx_all = self.xs[-1] - self.xs[0]
-            dy_all = self.ys[-1] - self.ys[0]
-            xstart = self.xs[0] + 0.5*(1.0 - boundary_nolines)*dx_all
-            xend = self.xs[-1] - 0.5*(1.0 - boundary_nolines)*dx_all
-            ystart = self.ys[0] + 0.5*(1.0 - boundary_nolines)*dy_all
-            yend = self.ys[-1] - 0.5*(1.0 - boundary_nolines)*dy_all
-            x_allstarts = np.linspace(xstart, xend, nx_lines)
-            y_allstarts = np.linspace(ystart, yend, ny_lines)
-            for i in range(nx_lines):
-                for j in range(ny_lines):
-                    #This only works if symmetric!
-                    xstart = x_allstarts[i]
-                    ystart = y_allstarts[j]
+            #Add capcbility for higher-resolution base
+            xscale = np.shape(self.surface_array)[0]/self.nx
+            yscale = np.shape(self.surface_array)[1]/self.ny
 
-                    self.starts.append([xstart, ystart, self.zs[0]])
+            nxl = np.shape(self.surface_array)[0]
+            nyl = np.shape(self.surface_array)[1]
 
-            self.starts = np.array(self.starts)
-            fig = plt.figure(figsize = (5,5))
-            plt.scatter(self.starts[:,0], self.starts[:,1], s= 0.1, c= 'black')
-            plt.close()
+            self.xsl = np.linspace(self.xs[0], self.xs[-1], nxl)
+            self.ysl = np.linspace(self.ys[0], self.ys[-1], nyl)
+
+            xcl = 0.5*(self.xsl[1:] + self.xsl[:-1])
+            ycl = 0.5*(self.ysl[1:] + self.ysl[:-1])
+
+            cellcount = 0
+            for i in range(nxl-1):  #run through lower surface cells
+                for j in range(nyl-1):
+                    prop = np.abs(self.surface_array[i,j] + 1)/max_surface
+                    #if prop > 0.9:
+                    if self.start_seeds[cellcount] < pb*prop**alpha:
+                        self.starts.append([xcl[i],ycl[j],0.0])
+                    cellcount += 1
+
             print('Tracing', len(self.starts), 'lines')
 
             self.nstarts = len(self.starts)
-            self.starts = self.starts.reshape(self.nstarts*3)
+            self.starts = np.array(self.starts).reshape(self.nstarts*3)
 
         def setup_tracer(self):
             #Output runtime variables to be read-in to Fortran code
             max_line_length = 10000
             ds = 0.1 #Tracing 'timestep' as a proportion of the self size
             print_flag = 1  #Print some things as the tracing happens
-            save_all = 0
+            save_all = 1
 
             self.nx_out = 1024   #Resolutions of the output data
             self.ny_out = int(self.nx_out*self.ny/self.nx)
@@ -284,187 +345,68 @@ for id in range(0,1):   #Loop for multiple runs
             os.system('make')
             os.system('./bin/fltrace %d' % self.id)
 
-            '''
-            if os.uname()[1] == 'brillouin.dur.ac.uk' or os.uname()[1] == 'modigliani.dur.ac.uk' or os.uname()[1] == 'coriolis.dur.ac.uk':
+        def plot_fieldlines(self):
+            #Plots field lines in pyvista
+            data = netcdf_file('./fl_data/flines%05d.nc' % (self.id), 'r', mmap=False)
 
-                os.system('/usr/lib64/openmpi/bin/mpiexec -np 1 ./bin/fltrace %d' % self.id)
-            elif os.uname()[1] == 'login1.ham8.dur.ac.uk' or os.uname()[1] == 'login2.ham8.dur.ac.uk':
-                os.system('mpiexec -np 1 ./bin/fltrace %d' % self.id)
-            else:
-                os.system('mpirun -np 1 ./bin/fltrace %d' % self.id)
-            '''
-
-        def plot_emissions(self, allscales = [], remove_files = True):
-
-            try:
-                data = netcdf_file('./fl_data/emiss%05d.nc' % self.id, 'r', mmap=False)
-                print('Emissions found with id', self.id)
-
-            except:
-                print('File not found -- tracing has probably failed. Sorry.')
-
-            self.xsum = np.swapaxes(data.variables['emiss_xsum'][:],0,1)
-            self.ysum = np.swapaxes(data.variables['emiss_ysum'][:],0,1)
-            self.zsum = np.swapaxes(data.variables['emiss_zsum'][:],0,1)
-
-            print(np.max(np.abs(self.xsum)))
-            self.flh_array = data.variables['flh_array'][:]
-            self.winding_array = data.variables['winding_array'][:]
-            self.twist_array = data.variables['twist_array'][:]
-            self.surface_array = data.variables['surface_array'][:]
-            self.current_array = data.variables['current_array'][:]
+            self.lines = np.swapaxes(data.variables['lines'][:],0,2)
 
             data.close()
 
-            #Using the start points already established, set this array up
-            nlines = self.nlines
+            p = pv.Plotter(off_screen=False, shape = (1,1))
+
+            for li, line in enumerate(self.lines):
+                line_length = 0
+                for k in range(len(line)):
+                    if line[k,2] < 1e6:
+                        line_length += 1
+                    else:
+                        break
+                line = line[:line_length,:]
+                #Thin out the lines (if required)
+                if line_length > 1:
+                    thin_fact = max(int(line_length/self.line_plot_length), 1)
+                    thinned_line = line[:line_length:thin_fact].copy()
+                    thinned_line[-1] = line[line_length-1].copy()
+                else:
+                    continue
+
+                line = np.array(thinned_line).tolist()
+                doplot = True
+
+                if doplot:
+                    p.add_mesh(pv.Spline(line, len(line)),color='white',line_width=0.1)
+
+            z_photo = int((self.nz)*(10.0 - self.z0)/(self.z1 - self.z0))
+
+            nlines = 500000   #Number from the original integration, not this one
             nx_lines = int(np.sqrt(nlines)*(self.x1-self.x0)/(self.y1 - self.y0))
             ny_lines = int(nlines/nx_lines)
 
-            flh_mesh = np.zeros((nx_lines, ny_lines))
-            winding_mesh = np.zeros((nx_lines, ny_lines))
-            twist_mesh = np.zeros((nx_lines, ny_lines))
-            surface_mesh = np.zeros((nx_lines, ny_lines))
-            current_mesh = np.zeros((nx_lines, ny_lines))
 
-            count = 0
-            for i in range(nx_lines):
-                for j in range(ny_lines):
-                    flh_mesh[i,j] = self.flh_array[count]
-                    winding_mesh[i,j] = self.winding_array[count]
-                    twist_mesh[i,j] = self.twist_array[count]
-                    surface_mesh[i,j] = self.surface_array[count]
-                    current_mesh[i,j] = self.current_array[count]
-                    count += 1
+            self.xsl = np.linspace(self.xs[0], self.xs[-1], self.nx)
+            self.ysl = np.linspace(self.ys[0], self.ys[-1], self.ny)
 
-            xplots = np.linspace(self.xs[0], self.xs[-1], nx_lines)
-            yplots = np.linspace(self.ys[0], self.ys[-1], ny_lines)
+            x, y = np.meshgrid(self.xsl, self.ysl)
+            z = 0.0*np.ones((np.shape(x)))
+            surface = pv.StructuredGrid(x, y, z)
 
-            fig, axs = plt.subplots(2,4, figsize = (10, 7))
+            p.background_color = "black"
 
-            ax = axs[0,0]
-            toplot = self.bz[:,:,0].T
-            ax.set_title("Magnetogram")
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(self.xs, self.ys, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_aspect('equal')
+            p.subplot(0, 0)
+            vmax = np.percentile(np.abs(self.surface_array),99)
+            p.add_mesh(surface, scalars = self.surface_array, show_edges=False,cmap = 'berlin', clim = [-vmax, vmax])
 
-            ax = axs[0,1]
-            toplot = flh_mesh.T
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(xplots, yplots, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_title("Field-line helicity")
-            ax.set_aspect('equal')
+            #p.remove_scalar_bar()
 
-            ax = axs[1,1]
-            toplot = flh_mesh.T*np.abs(surface_mesh.T)
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(xplots, yplots, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_title("Weighted field-line helicity")
-            ax.set_aspect('equal')
+            p.show()
+            p.close()
 
-            ax = axs[1,0]
-            toplot = winding_mesh.T
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(xplots, yplots, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_title("Winding")
-            ax.set_aspect('equal')
-
-            ax = axs[0,2]
-            toplot = twist_mesh.T
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(xplots, yplots, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_title("Twist")
-            ax.set_aspect('equal')
-
-            ax = axs[1,2]
-            toplot = twist_mesh.T*np.abs(surface_mesh.T)
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(xplots, yplots, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_title("Weighted twist")
-            ax.set_aspect('equal')
-
-            ax = axs[0,3]
-            toplot = current_mesh.T
-            vmax = np.percentile(np.abs(toplot), 99)
-            vmin = -vmax
-            ax.pcolormesh(xplots, yplots, toplot,cmap ='seismic', vmax = vmax, vmin = vmin)
-            ax.set_title("Total Current along line")
-            ax.set_aspect('equal')
-
-            ax = axs[1,3]
-            ax.set_axis_off()
-
-            plt.tight_layout()
-            if self.show:
-                plt.show()
-
-            plt.savefig('./plots/%s_flh.png' % self.input_fname[:-3])
-            plt.close()
-
-            xsplot = np.linspace(self.x0,self.x1,self.zsum.shape[0]+1)
-            ysplot = np.linspace(self.y0,self.y1,self.zsum.shape[1]+1)
-            zsplot = np.linspace(self.z0,self.z1,self.xsum.shape[1]+1)
-
-            #fig, axs = plt.subplots(4,1, figsize = (15,7.5))
-            fig = plt.figure(figsize = (10,7.5))
-
-            toplots = [np.sqrt(self.zsum), np.sqrt(self.ysum), np.sqrt(self.xsum)]
-            ranges = [[xsplot, ysplot], [xsplot, zsplot],[ysplot, zsplot]]
-            titles = ['Top', 'x face', 'y face']
-
-            gs0 = gridspec.GridSpec(4,2,figure=  fig)
-
-
-            for i in range(3):
-                if i == 0:
-                    ax = fig.add_subplot(gs0[0:2,0])
-                else:
-                    ax = fig.add_subplot(gs0[2:4,i-1])
-                toplot = toplots[i]
-
-                #Top down
-                #vmax = np.percentile(toplot, 99.75)
-                pc = (np.sum([toplot > 1e-5])/np.sum([toplot >= 0.0]))
-                pc_total = 100 - 0.1*pc
-                vmax = np.percentile(toplot, pc_total)
-                vmax = max(0.1, vmax)
-
-                if len(allscales) > 0:
-                    vmax = allscales[self.snap, i]
-                #vmax = 1.0
-                im = ax.pcolormesh(ranges[i][0], ranges[i][1],toplot.T, vmin = 0, vmax = vmax, cmap = 'inferno')
-                ax.set_aspect('equal')
-                ax.set_title(titles[i])
-
-
-            #Then magnetogram
-            ax = fig.add_subplot(gs0[0:2,1])
-            toplot = self.bz[:,:,0].T
-            ax.pcolormesh(self.xs, self.ys, toplot,cmap ='seismic', vmax = np.max(np.abs(toplot)), vmin = -np.max(np.abs(toplot)))
-            ax.set_aspect('equal')
-            ax.set_title('Lower boundary magnetogram')
-
-            plt.tight_layout()
-            plt.savefig('./plots/%s_whitelight.png' % self.input_fname[:-3])
-            if self.show:
-                plt.show()
-            plt.close()
-
-            if self.remove_files:
-                os.system('rm -r ./fl_data/emiss%05d.nc' % self.id)
-
-    fltrace = Fltrace(input_fname = input_fname, nlines = nlines, show = show, id = id, do_flh = not justplot, closed_boundaries = closed_boundaries, remove_files = remove_emission_files, swapaxes = swapaxes)
+    fltrace = Fltrace(input_fname = input_fname, nlines = nlines, show = show, id = id, do_flh = False, closed_boundaries = closed_boundaries, remove_files = remove_emission_files, swapaxes = swapaxes)
     if not justplot:
         fltrace.trace_lines()
-    fltrace.plot_emissions(remove_files = False)
 
+    fltrace.plot_fieldlines()
 
 
 

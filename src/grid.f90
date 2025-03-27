@@ -192,6 +192,38 @@ MODULE grid
 
     END SUBROUTINE export_emissivity
 
+    subroutine export_fieldlines
+    !Output the calculated magnetic field lines as a netcdf file flines.nc
+    IMPLICIT NONE
+
+    character(len=64):: filename
+    integer:: aid, bid, cid, vid, ncid, i
+    CHARACTER(LEN=5):: run_id
+
+    write (run_id,'(I5.5)') snap
+
+    filename = trim('./fl_data/flines'//trim(run_id)//'.nc')
+
+    call try(nf90_create(trim(filename), nf90_clobber, ncid))
+
+    !Define variables
+    call try(nf90_def_dim(ncid, 'a', 3, aid))  !Make up fake dimensions here
+    call try(nf90_def_dim(ncid, 'b', max_line_length, bid))  !Make up fake dimensions here
+    call try(nf90_def_dim(ncid, 'c', nstarts*2, cid))  !Make up fake dimensions here
+
+    call try(nf90_def_var(ncid, 'lines', nf90_double, (/cid,bid,aid/), vid))
+    call try(nf90_enddef(ncid))
+
+    !Write variables
+    call try(nf90_put_var(ncid, vid, all_lines))
+    call try(nf90_close(ncid))
+
+    if (print_flag > 0.5_num) print*, 'Field lines exported to file ', filename
+
+    return
+
+    end subroutine export_fieldlines
+
 
     SUBROUTINE try(status)
     ! Catch error in reading netcdf fild.

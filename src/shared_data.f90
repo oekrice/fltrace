@@ -56,6 +56,8 @@ MODULE shared_data
     INTEGER:: current_line_length
     real(num), allocatable:: flh_array(:), winding_array(:), twist_array(:), surface_array(:), current_array(:)
 
+    real(num), allocatable:: all_lines(:,:,:), export_lines(:,:,:)
+
 !*******************************************************************************
 END MODULE shared_data
 !*******************************************************************************

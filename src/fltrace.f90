@@ -74,7 +74,9 @@ PROGRAM fltrace
 
     call integrate_fieldlines()
 
-    call export_emissivity()
+    if (save_all < 0.5_num) call export_emissivity()   !Only export if they haven't been saved
+
+    if (save_all > 0.5_num) call export_fieldlines()   !Only export if they haven't been saved
 
     contains
 
@@ -262,6 +264,9 @@ PROGRAM fltrace
     avgj = sum(line_j)/lcount !Average current throughout the line
 
     current_line_length = lcount
+
+    if (save_all > 0.5_num)  all_lines(line_number,:,:) = current_line
+
     END SUBROUTINE
 
     SUBROUTINE update_emissivity(line, linej, lcount)
@@ -297,7 +302,7 @@ PROGRAM fltrace
     !Traces in both directions
     IMPLICIT NONE
 
-    integer:: start_index, line_number
+    integer:: start_index
     real(num), dimension(:,:):: line1(0:max_line_length-1,0:2), line2(0:max_line_length-1,0:2)
     real(num):: linej_total, winding_total, flh_total, twist_total, surface_at_point
     INTEGER:: length1, length2
@@ -310,6 +315,8 @@ PROGRAM fltrace
     allocate(flh_array(0:nstarts-1), winding_array(0:nstarts-1), twist_array(0:nstarts-1), surface_array(0:nstarts-1), current_array(0:nstarts-1))
     line_number = 0
 
+    if (save_all > 0.5_num) allocate(all_lines(0:2*nstarts-1, 0:max_line_length-1, 0:2))
+
     do start_index = 0, nstarts-1
         linej_total = 0.0_num
         flh_total = 0.0_num; winding_total = 0.0_num; twist_total = 0.0_num
@@ -318,7 +325,9 @@ PROGRAM fltrace
 
          !Integrate opposite to magnetic field.
          call integrate_line(starts(start_index,:),-1)
+
          line_number = line_number + 1
+
          line1 = current_line
          linej_total = linej_total + sum(line_j)
          flh_total = flh_total + sum(line_flh)
@@ -329,6 +338,7 @@ PROGRAM fltrace
          !Integrate with magnetic field
          call integrate_line(starts(start_index,:),1)
          line_number = line_number + 1
+
          line2 = current_line
          linej_total = linej_total + sum(line_j)
          flh_total = flh_total + sum(line_flh)
