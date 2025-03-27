@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.fft import ifft2,fft2,fftfreq, fftshift, ifftshift,ifft,fft
 from scipy.interpolate import RegularGridInterpolator
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from streamtracer import StreamTracer, VectorGrid
 #from numba import jit
 
@@ -218,7 +218,7 @@ def fieldLineIntegration(fl,interpolatedQuantity):
         #dsSet=np.array([np.linalg.norm(v) for v in difSet])
         dsSet= np.linalg.norm(difSet,axis=1)
         integratedQuantity = interpolatedQuantity(fl)
-        return simps(dsSet*np.vstack([integratedQuantity[1:], integratedQuantity[:-1]]).mean(axis=0))
+        return simpson(dsSet*np.vstack([integratedQuantity[1:], integratedQuantity[:-1]]).mean(axis=0))
     else:
         return 0.0
 
@@ -328,21 +328,21 @@ def addDivergenceCleaningTerm(Bfield,ncells,spacing):
     divField = divergence(Bfield,spacing)
     fm = getFrequencyMatrix(ncells,spacing);
     # note in the k matrix below the k=0 element is set to one so we can divide by it.
-    k = np.array([np.array([1.0 if i==j==0 else np.linalg.norm(fm[i][j]) for i in range(len(fm))]) for j  in range(len(fm[0]))]).T    
+    ksq = np.array([np.array([1.0 if i==j==0 else np.linalg.norm(fm[i][j])**2 for i in range(len(fm))]) for j  in range(len(fm[0]))]).T    
     divFreeField = np.zeros(Bfield.shape)
     for i in range(Bfield.shape[2]):
         # get the transformed divergence 
         divF = fft2(divField[:,:,i])
-        divergenceFactor = -1j*divF/k
+        divergenceFactor = -1j*divF/ksq
         divergenceTerm  = np.real(ifft2((fm*divergenceFactor[:,:,np.newaxis]).transpose(2,0,1)))
         ## fix i =j  element
         divergenceTerm[0][0][0] = 0.0
         divergenceTerm[1][0][0] = 0.0
         #divFreeField[:,:,i,0] = Bfield[:,:,i,0]+divergenceTerm[:,:,0]
         #divFreeField[:,:,i,1] = Bfield[:,:,i,1]+divergenceTerm[:,:,1]
-        divFreeField[:,:,i,0] = Bfield[:,:,i,0]+divergenceTerm[0]
-        divFreeField[:,:,i,1] = Bfield[:,:,i,1]+divergenceTerm[1]
-        divFreeField[:,:,i,2] = np.sign(Bfield[:,:,i,2])
+        divFreeField[:,:,i,0] = Bfield[:,:,i,0]-divergenceTerm[0]
+        divFreeField[:,:,i,1] = Bfield[:,:,i,1]-divergenceTerm[1]
+        divFreeField[:,:,i,2] = Bfield[:,:,i,2]
     return divFreeField
 
 def addDivergenceCleaningTermTest(Bfield,spacing):
@@ -357,12 +357,18 @@ def addDivergenceCleaningTermTest(Bfield,spacing):
     return fm,divergenceFactor
 
 def unitSpeedField(bField,tol):
-    bz = bField[:,:,:,2]
-    bz[abs(bz) < tol] = 1.0
     bFieldOut = np.zeros(bField.shape)
-    bFieldOut[:,:,:,0]= bField[:,:,:,0]/bz
-    bFieldOut[:,:,:,1]= bField[:,:,:,1]/bz
-    bFieldOut[:,:,:,2]= np.sign(bField[..., 2])
+    for i in range(bField.shape[2]):
+        bz = bField[:,:,i,2]
+        bzMax = np.max(abs(bz))
+        #tolerance is a percentage of the maximum
+        tolScaled = tol*bzMax
+        tolTruth = abs(bz) < tolScaled
+        bz[tolTruth]  = tolScaled
+        bFieldOut[:,:,i,0]= bField[:,:,i,0]/abs(bz)
+        bFieldOut[:,:,i,1]= bField[:,:,i,1]/abs(bz)
+        # now make zero the parts which are too weak in bz
+        bFieldOut[:,:,i,2]= np.ones(bField[:,:,i,2].shape)
     return bFieldOut
 
 
