@@ -78,7 +78,7 @@ class FLH():
         ax.set_aspect('equal')
         ax.set_title('uz')
         plt.tight_layout()
-        plt.show()
+        plt.close()
         BUnit = flt.addDivergenceCleaningTerm(usf,grid_ncells,grid_spacing)   #Returns unit speed field which is roughly divergence-free
         divTestA = flt.divergence(usf,grid_spacing)
         divTestB = flt.divergence(BUnit,grid_spacing)
@@ -93,7 +93,7 @@ class FLH():
         fig.colorbar(im,ax=ax)
         ax.set_aspect('equal')
         ax.set_title('uy')
-        plt.show()
+        plt.close()
         AWind = flt.getAFastSingle(BUnit,grid_ncells,grid_spacing)  #Returns A for the winding
 
 
@@ -127,7 +127,7 @@ class FLH():
         fig.colorbar(im,ax=ax)
         ax.set_aspect('equal')
         ax.set_title('uy')
-        plt.show()
+        plt.close()
             
         curlField = flt.curl(bField,grid_spacing)
 
