@@ -45,25 +45,22 @@ This one is for using existing emissions to decide which field lines to plot, th
 
 for id in range(0,1):   #Loop for multiple runs
 
-    snap = 660
-
-    #Copy files to plot into input folder:
-    #os.system('scp -r /extra/tmp/trcn27/mf3d/%03d/%04d.nc ./input/%04d.nc' % (id, snap, id))
+    id = 61200   #This should be the same ID as used in fltrace for the emissions:
+    #eg. the output is fl_data/emiss61200.nc if id = 61200.
+    #LEADING ZEROS ARE NECESSARY
 
     #Define parameters for plotting:
-    #input_fname = 'Bout__2021.0621.061200.nc'    #File name within the directory ./input/'
     input_fname = 'Bout__2021.0621.061200.nc'
-    #input_fname = '%04d.nc' % id   #File name within the directory ./input/'
 
-    nlines = 1000                            #Approx number of field lines to trace
-    show = True                            #Plots various things, including the imported magnetic field on the lower boundary
-    justplot = False                        #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
-    closed_boundaries = True              #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
+    nlines = 5000                            #Approx number of field lines to trace
+    show = True                            #Brings up pyvista interactively. If false will save to /plots. Can't do both for reasons I don't understand.
+    justplot = False                       #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
     remove_emission_files = False               #Removes the emission files after plotting
     swapaxes = True                             #Swaps x and z axes of the imported file
 
+    plot_angle = 0.0   #Angle in radians from the default for the final screenshot
     class Fltrace():
-        def __init__(self, input_fname, id = 0, nlines = 10000, show = True, do_flh = False, closed_boundaries = False, swapaxes = False, remove_files = False):
+        def __init__(self, input_fname, id = 0, nlines = 10000, show = True, do_flh = False, swapaxes = False, remove_files = False):
 
             #Some parameters
             self.max_line_length = 10000
@@ -170,18 +167,9 @@ for id in range(0,1):   #Loop for multiple runs
 
             calculate_current(self)   #This may have been imported, but also might not have been so just calculate it anyways
 
-            if do_flh:
-                print('Finding various vector potentials for helicity calculations...')
-                flh = FLH(self, closed_boundaries = closed_boundaries)
-                print('Seemingly complete.')
-                self.flh_density = flh.flh_density
-                self.winding_density = flh.winding_density
-                self.twist_density = flh.twist_density
             print('Saving for use by Fortran')
             save_for_fortran(self)
             print('Saved to temporary file')
-
-        def trace_lines(self):
 
             #Folder admin
             if not os.path.exists('./fl_data/'):
@@ -189,6 +177,8 @@ for id in range(0,1):   #Loop for multiple runs
 
             #Find start points. Assumed to be on a regularly-spaced grid
             self.set_starts()
+
+        def trace_lines(self):
 
             #Create runtime variables for fortran and save out to tmp folder
             self.setup_tracer()
@@ -253,9 +243,10 @@ for id in range(0,1):   #Loop for multiple runs
                     count += 1
 
             #_______________________________________________________________________________________________________________
-            reference_array = winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
-            reference_array = mag_mesh*winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
-            reference_array = flh_mesh
+            reference_array = np.sign(mag_mesh)*winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
+            #reference_array = flh_mesh
+            #reference_array = mag_mesh
+
             #reference_array = np.ones(winding_mesh.shape)
 
 
@@ -353,7 +344,10 @@ for id in range(0,1):   #Loop for multiple runs
 
             data.close()
 
-            p = pv.Plotter(off_screen=False, shape = (1,1))
+            if show:
+                p = pv.Plotter(off_screen=False, shape = (1,1))
+            else:
+                p = pv.Plotter(off_screen=True, shape = (1,1))
 
             for li, line in enumerate(self.lines):
                 line_length = 0
@@ -391,18 +385,36 @@ for id in range(0,1):   #Loop for multiple runs
             z = 0.0*np.ones((np.shape(x)))
             surface = pv.StructuredGrid(x, y, z)
 
-            p.background_color = "black"
+            p.background_color = "darkslategrey"
 
             p.subplot(0, 0)
             vmax = np.percentile(np.abs(self.surface_array),99)
             p.add_mesh(surface, scalars = self.surface_array, show_edges=False,cmap = 'berlin', clim = [-vmax, vmax])
 
-            #p.remove_scalar_bar()
+            camera_position = p.camera.position
 
-            p.show()
+            posx, posy, posz = camera_position
+            xcentre =  (self.x1 + self.x0)/2
+            ycentre =  (self.y1 + self.y0)/2
+
+            #That doesn't work because angles. Bugger.
+            print(posx, xcentre, posy, ycentre)
+            xyabs = np.sqrt((posx-xcentre)**2 + (posy-ycentre)**2)
+            #xyabs = xyabs/4
+            zoom = 1.5
+
+            new_position = [xcentre + xyabs*np.sin(plot_angle)/zoom, ycentre -xyabs*np.cos(plot_angle)/zoom, posz/zoom]
+
+            p.camera.position = new_position
+
+            p.camera.focal_point = ((self.x1 + self.x0)/2,(self.y1 + self.y0)/2,self.z0 + (self.z1 - self.z0)/4)
+
+            p.remove_scalar_bar()
+
+            p.show(screenshot='plots/%s_lines.png' % input_fname[:-3], window_size = (2000,2000))
             p.close()
 
-    fltrace = Fltrace(input_fname = input_fname, nlines = nlines, show = show, id = id, do_flh = False, closed_boundaries = closed_boundaries, remove_files = remove_emission_files, swapaxes = swapaxes)
+    fltrace = Fltrace(input_fname = input_fname, nlines = nlines, show = show, id = id, do_flh = False, remove_files = remove_emission_files, swapaxes = swapaxes)
     if not justplot:
         fltrace.trace_lines()
 
