@@ -54,9 +54,11 @@ for id in range(0,1):   #Loop for multiple runs
 
     nlines = 5000                            #Approx number of field lines to trace
     show = True                            #Brings up pyvista interactively. If false will save to /plots. Can't do both for reasons I don't understand.
-    justplot = False                       #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
+    justplot = True                       #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
     remove_emission_files = False               #Removes the emission files after plotting
     swapaxes = True                             #Swaps x and z axes of the imported file
+
+    export_html = True
 
     plot_angle = 0.0   #Angle in radians from the default for the final screenshot
     class Fltrace():
@@ -410,6 +412,9 @@ for id in range(0,1):   #Loop for multiple runs
             p.camera.focal_point = ((self.x1 + self.x0)/2,(self.y1 + self.y0)/2,self.z0 + (self.z1 - self.z0)/4)
 
             p.remove_scalar_bar()
+
+            if export_html:
+                p.export_html('plots/%s_interactive.html' % input_fname[:-3])
 
             p.show(screenshot='plots/%s_lines.png' % input_fname[:-3], window_size = (2000,2000))
             p.close()
