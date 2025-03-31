@@ -42,19 +42,19 @@ Will save plots to ./plots/ folder as pngs.
 
 for id in range(0,1):   #Loop for multiple runs
 
-    snap = 660
 
     #Copy files to plot into input folder:
     #os.system('scp -r /extra/tmp/trcn27/mf3d/%03d/%04d.nc ./input/%04d.nc' % (id, snap, id))
 
     #Define parameters for plotting:
     #input_fname = 'Bout__2021.0621.061200.nc'    #File name within the directory ./input/'
-    input_fname = 'Bout__2021.0621.061200.nc'
+    #input_fname = 'Bout__2021.0621.061200.nc'
     #input_fname = '%04d.nc' % id   #File name within the directory ./input/'
+    input_fname = '61200.nc'
 
-    nlines = 1000000                            #Approx number of field lines to trace
+    nlines = 100000                            #Approx number of field lines to trace
     show = True                            #Plots various things, including the imported magnetic field on the lower boundary
-    justplot = True                          #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
+    justplot = False                         #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
     closed_boundaries = True              #If there are field lines through the x and y boundaries, set to False. This does Chris' correction to the vector potentials, which is quite slow.
     remove_emission_files = False               #Removes the emission files after plotting
     swapaxes = True                             #Swaps x and z axes of the imported file
@@ -209,6 +209,7 @@ for id in range(0,1):   #Loop for multiple runs
             nx_lines = int(np.sqrt(nlines)*(self.x1-self.x0)/(self.y1 - self.y0))
             ny_lines = int(nlines/nx_lines)
 
+            print('Original nx and ny:', nx_lines, ny_lines, self.x0, self.x1)
             alpha = 2.0
 
             self.starts = []

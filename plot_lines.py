@@ -45,29 +45,32 @@ This one is for using existing emissions to decide which field lines to plot, th
 
 for id in range(0,1):   #Loop for multiple runs
 
-    id = 61200   #This should be the same ID as used in fltrace for the emissions:
+    id = 0   #This should be the same ID as used in fltrace for the emissions:
     #eg. the output is fl_data/emiss61200.nc if id = 61200.
     #LEADING ZEROS ARE NECESSARY
 
     #Define parameters for plotting:
-    input_fname = 'Bout__2021.0621.061200.nc'
+    #input_fname = 'Bout__2021.0621.061200.nc'
+    #input_fname = '%04d.nc' % id
+    input_fname = '61200.nc'   #FILENAME FOR THE ORIGINAL MAGNETIC FIELD
+    nlines_in_fltrace = 100000   #Number of lines ORIGINALLY traced in calculating the winding etc.
+    nlines = 10000                            #Number of field lines to trace for the 3D plot
 
-    nlines = 5000                            #Approx number of field lines to trace
     show = True                            #Brings up pyvista interactively. If false will save to /plots. Can't do both for reasons I don't understand.
-    justplot = True                       #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
+    justplot = False                      #If true, finds existing data and just plots it. If you want to just tweak the plots without running everything again.
     remove_emission_files = False               #Removes the emission files after plotting
     swapaxes = True                             #Swaps x and z axes of the imported file
 
-    export_html = True
+    export_html = False
 
-    plot_angle = 0.0   #Angle in radians from the default for the final screenshot
+    plot_angle = np.pi/2   #Angle in radians from the default for the final screenshot
     class Fltrace():
         def __init__(self, input_fname, id = 0, nlines = 10000, show = True, do_flh = False, swapaxes = False, remove_files = False):
 
             #Some parameters
             self.max_line_length = 10000
             self.ds = 0.05 #Tracing 'timestep' as a proportion of the self size
-            self.weakness_limit = 1e-5  #Minimum field strength to stop plotting
+            self.weakness_limit = 1e-1  #Minimum field strength to stop plotting
             self.line_plot_length = 100  #To save time while plotting, reduce the length of the plotted lines
             self.nlines = nlines/2
 
@@ -224,9 +227,15 @@ for id in range(0,1):   #Loop for multiple runs
 
             data.close()
 
-            nlines = 500000   #Number from the original integration, not this one
-            nx_lines = int(np.sqrt(nlines)*(self.x1-self.x0)/(self.y1 - self.y0))
-            ny_lines = int(nlines/nx_lines)
+            nlines_import = nlines_in_fltrace/2   #Number from the original integration, not this one
+            nx_lines = int(np.sqrt(nlines_import)*(self.x1-self.x0)/(self.y1 - self.y0))
+            ny_lines = int(nlines_import/nx_lines)
+
+            print('DIMENSION CHECK:')
+            print('nx: ', nx_lines, 'ny: ', ny_lines)
+            print(nx_lines*ny_lines,'=', len(self.flh_array))
+            if nx_lines*ny_lines != len(self.flh_array):
+                raise Exception('Original nlines not correct - change in line 228 ish')
 
             flh_mesh = np.zeros((nx_lines, ny_lines))
             winding_mesh = np.zeros((nx_lines, ny_lines))
@@ -245,12 +254,14 @@ for id in range(0,1):   #Loop for multiple runs
                     count += 1
 
             #_______________________________________________________________________________________________________________
-            reference_array = np.sign(mag_mesh)*winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
+            #reference_array = np.sign(mag_mesh)*winding_mesh   #CHANGE THIS IF YOU WANT SOMETHING DIFFERENT
             #reference_array = flh_mesh
-            #reference_array = mag_mesh
+            reference_array = mag_mesh
 
             #reference_array = np.ones(winding_mesh.shape)
-
+            plt.pcolormesh(reference_array)
+            plt.title('Startpoints reference array (for nlines check)')
+            plt.show()
 
 
             self.surface_array = self.interpolate_surface_array(reference_array)   #Distribution of surface somethingorother
@@ -360,7 +371,7 @@ for id in range(0,1):   #Loop for multiple runs
                         break
                 line = line[:line_length,:]
                 #Thin out the lines (if required)
-                if line_length > 1:
+                if line_length > 5:
                     thin_fact = max(int(line_length/self.line_plot_length), 1)
                     thinned_line = line[:line_length:thin_fact].copy()
                     thinned_line[-1] = line[line_length-1].copy()
@@ -374,11 +385,6 @@ for id in range(0,1):   #Loop for multiple runs
                     p.add_mesh(pv.Spline(line, len(line)),color='white',line_width=0.1)
 
             z_photo = int((self.nz)*(10.0 - self.z0)/(self.z1 - self.z0))
-
-            nlines = 500000   #Number from the original integration, not this one
-            nx_lines = int(np.sqrt(nlines)*(self.x1-self.x0)/(self.y1 - self.y0))
-            ny_lines = int(nlines/nx_lines)
-
 
             self.xsl = np.linspace(self.xs[0], self.xs[-1], self.nx)
             self.ysl = np.linspace(self.ys[0], self.ys[-1], self.ny)
@@ -399,11 +405,9 @@ for id in range(0,1):   #Loop for multiple runs
             xcentre =  (self.x1 + self.x0)/2
             ycentre =  (self.y1 + self.y0)/2
 
-            #That doesn't work because angles. Bugger.
-            print(posx, xcentre, posy, ycentre)
             xyabs = np.sqrt((posx-xcentre)**2 + (posy-ycentre)**2)
             #xyabs = xyabs/4
-            zoom = 1.5
+            zoom = 1.0
 
             new_position = [xcentre + xyabs*np.sin(plot_angle)/zoom, ycentre -xyabs*np.cos(plot_angle)/zoom, posz/zoom]
 

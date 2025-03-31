@@ -197,7 +197,7 @@ MODULE grid
     IMPLICIT NONE
 
     character(len=64):: filename
-    integer:: aid, bid, cid, vid, ncid, i
+    integer:: aid, bid, cid, vid, ncid
     CHARACTER(LEN=5):: run_id
 
     write (run_id,'(I5.5)') snap
